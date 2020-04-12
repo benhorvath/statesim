@@ -8,6 +8,7 @@ import logging
 import random
 
 import networkx as nx
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.integrate as integrate
 
@@ -40,6 +41,12 @@ class InternationalSystem(object):
         """
         self.config = config
         self.network = self.generate_world()
+        # TODO:
+        # self.network = self.generate_network()
+        # self.world = self.generate_world()  # builds sates, including self.draw_borders
+
+
+        self.draw_borders(self.network)
 
     def generate_world(self):
         """ Creates the world. First, uses networkx to generate a 'map' which
@@ -62,20 +69,19 @@ class InternationalSystem(object):
 
         self.world = world
 
-        self.draw_borders(network)
-
         return network
+
+    def draw(self):
+        """
+        """
+        nx.draw_networkx(self.network)
 
     def draw_borders(self, network):
         """ """
         # Wipe out existing borders
         for i in self.world.keys():
-            self.world[i].border = []
-        # Add new borders
-        for i in network.edges:
-            state_i = i[0]
-            state_j = i[1]
-            self.world[state_i].border.append( self.world[state_j] )
+            neighbors = [j for j in self.network.neighbors(i)]
+            self.world[i].border = [self.world[j] for j in neighbors]
 
     def likelihood_victory(self, a, b):
         """ Returns the probability state A wins a war against state B.
@@ -88,10 +94,12 @@ class InternationalSystem(object):
         have a greater chance of victory against more pwoerful states. The
         power ratio becomes more and more deterministic and sigma decreases.
         """
+        a_power = sum(a.alliance)
+        b_power = sum(b.alliance)
         sigma = self.config['victory_sigma']
         const = 1 / np.sqrt(np.pi * sigma)
         f = lambda x: np.exp( -1 * np.square(x / sigma) )
-        area = integrate.quad( f, -np.inf, np.log(a.power / b.power) )
+        area = integrate.quad( f, -np.inf, np.log(a_power / b_power) )
         lv_init = area[0] * const
         if lv_init < 0:
             lv = 0.0
@@ -141,12 +149,12 @@ class InternationalSystem(object):
         for i in victor_states:
             cost = war_cost - weight
             i.power = i.power * (1 - cost)
-            logger.info('%s assessed war damage of %s power units' % (i, round(cost, 2)))
+            logger.info('%s assessed war damage of %s percent' % (i, round(cost, 2)*100))
 
         for i in loser_states:
             cost = war_cost + weight
             i.power = i.power * (1 - cost)
-            logger.info('%s assessed war damage of %s power units' % (i, round(cost, 2)))
+            logger.info('%s assessed war damage of %s percent' % (i, round(cost, 2)*100))
 
         # Spoils -- TODO seperate function
         total_reparations = sum( [i.power * self.config['reparations'] for i in loser_states] )
@@ -177,22 +185,23 @@ class InternationalSystem(object):
         or the iteration limit is reached. Otherwise, grant all remaining states
          internal power growth of 3 percent. The simulation moves to segment.
         """
-        # TODO redraw borders only once, after all states with 0 power are removed and
-        #      borders rectified
-        for i in range(0, len(self.world)):
-            if i.power <= 0:
+
+        print('End turn')
+        for k in list(self.world.keys()):
+            if self.world[k].power <= 0:
+                print('State %s is removed from system' % k)
                 # If conquered, give borders to conquering state and delete from system
-                n = i.name
-                neighbors = [i for i in self.network.neighbors(n)]
-                new_borders = [i for i in neighbors if i != i.conquered.name]
-                del self.world[i.name]
-                self.network.remove_node(n)
+                n = k
+                neighbors = [j for j in self.network.neighbors(n)]
+                new_borders = [j for j in neighbors if j != k]
                 for j in new_borders:
-                    self.network.add_edge(i.conquered.name, j)
+                    self.network.add_edge(self.world[k].conquered.name, j)
+                self.network.remove_node(n)
+                del self.world[n]
                 self.draw_borders(self.network)
             else:
-                self.world[i].alliance = []
-                self.world[i].power = self.world[i].power * (1 + self.config['growth_mu'])
+                self.world[k].alliance = [self.world[k]]
+                self.world[k].power = self.world[k].power * (1 + self.config['growth_mu'])
                          
 
     def random_power(self):
@@ -200,13 +209,27 @@ class InternationalSystem(object):
         initialization phase.
 
         Generates a random number from a normal distribution with a mean and
-        standard deviation specified in the config file.
+        standard deviation specified in the config file. Does not permit power
+        to fall below zero.
         """
-        return np.random.normal(loc=self.config['power_dist_mu'],
-                                scale=self.config['power_dist_sigma'])
+        power_init = np.random.normal(loc=self.config['power_dist_mu'],
+                                      scale=self.config['power_dist_sigma'])
+        power = max(power_init, 0)
+        return power
+
+    def plot_power(self):
+        """
+        """
+        x = [self.world[k].power for k in self.world.keys()]
+        plt.hist(x)
 
     def random_state(self):
         """ Returns a random state from the world, propotional to its share
         of power in the world.
         """
-        return random.choice(self.world)
+        states = [k for k in self.world.keys()]
+        total_power = sum([self.world[i].power for i in states])
+        power_dist = [self.world[i].power / total_power for i in states]
+        random_state = np.random.choice(states, 1, power_dist)[0]
+
+        return self.world[random_state]

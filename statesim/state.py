@@ -15,7 +15,7 @@ class State(object):
         self.power = power
         self.misperception = misperception
         self.border = []
-        self.alliance = []
+        self.alliance = [self]
         self.conquered = None
 
     def scan_targets(self):
@@ -29,17 +29,18 @@ class State(object):
         """ Returns list of states that border the state specified as against,
         such that it is the minimal winning coalition.
         """
-        against_power_est = self.estimate_power(against) + self.estimate_power(against.alliance)
+        against_power_est = self.estimate_alliance(against)
         bordering_states = [i for i in against.border if i != self and i not in self.alliance]
 
         if len(bordering_states) == 0:
             return None
 
         bordering_states.sort()
-        potential_alliance = [self, bordering_states[0]]
+        # potential_alliance = [self, bordering_states[0]]
+        potential_alliance = self.alliance + [bordering_states[0]]
         for i in bordering_states[1:]:
             i_power_est = self.estimate_power(i)
-            if self.power + i_power_est + sum(potential_alliance) < against_power_est:
+            if sum(potential_alliance) < against_power_est:
                 potential_alliance.append(i)
             else:
                 break
@@ -52,17 +53,24 @@ class State(object):
         """
         print('%s proposes alliance to %s' % (self, to)),
         logger.info('%s proposes alliance to %s' % (self, to))
-        if against.alliance == []:
-            against_est_power = to.estimate_power(against)
-        else:
-            against_est_power = to.estimate_power(against.alliance)
+        # Estimate enemy alliance
+        against_est_power = to.estimate_alliance(against)
+
+        # Estimate proposed alliance -- to should not estimate its own power
+        other_allies = [i for i in alliance if i != to]
+        alliance_est_power = to.estimate_alliance(other_allies) + to.power
+
+        # if against.alliance == []:
+        #     against_est_power = to.estimate_power(against)
+        # else:
+        #     against_est_power = to.estimate_power(against.alliance)
         
-        alliance_est_power = to.estimate_power(alliance)
+        # alliance_est_power = to.estimate_power(alliance)
 
         if alliance_est_power > against_est_power:
+            logger.info('%s has accepted offer of alliance from %s' % (to, self))
             self.alliance.append(to)
             to.alliance.append(self)
-            logger.info('%s has accepted offer of alliance from %s' % (to, self))
             return True
         else:
             logger.info('%s has rejected offer of alliance from %s' % (to, self))
@@ -72,18 +80,29 @@ class State(object):
         """ Calculate state's estimation of another, using
         config settings to calculate error.
         """
+        # if type(state) == State:
+        estimate = state.power * np.random.normal(loc=1, scale=self.misperception)
+        logger.info('%s estimates %s power as %s' % (self, state, round(estimate, 2)))
+        return estimate
+        # elif type(state) == list:
+        #     if state == []:
+        #         logger.info('%s estimates %s power as %s' % (self, state, 0))
+        #         return 0
+        #     else:
+        #         estimate = sum([i.power * np.random.normal(loc=1, scale=self.misperception) for i in state])
+        #         logger.info('%s estimates %s power as %s' % (self, state, round(estimate, 2)))
+        #         return estimate
+
+    def estimate_alliance(self, state):
+        """ Estimate power of multiple states at once, including proposed alliances.
+        """
         if type(state) == State:
-            estimate = state.power * np.random.normal(loc=1, scale=self.misperception)
-            logger.info('%s estimates %s power as %s' % (self, state, round(estimate, 2)))
-            return estimate
+            allies = state.alliance
         elif type(state) == list:
-            if state == []:
-                logger.info('%s estimates %s power as %s' % (self, state, 0))
-                return 0
-            else:
-                estimate = sum([i.power * np.random.normal(loc=1, scale=self.misperception) for i in state])
-                logger.info('%s estimates %s power as %s' % (self, state, round(estimate, 2)))
-                return estimate
+            allies = state
+
+        allies_power = [self.estimate_power(i) for i in allies]
+        return sum(allies_power)
 
 
     def __repr__(self):
