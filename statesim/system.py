@@ -147,7 +147,7 @@ class InternationalSystem(object):
         loser_states = [war['loser']] + war['loser'].alliance
 
         for i in victor_states:
-            cost = war_cost - weight
+            cost = max(war_cost - weight, 0.01)
             i.power = i.power * (1 - cost)
             logger.info('%s assessed war damage of %s percent' % (i, round(cost, 2)*100))
 
@@ -161,7 +161,7 @@ class InternationalSystem(object):
         for i in loser_states:
             reparations = i.power * self.config['reparations']
             i.power = i.power - reparations
-            logger.info('%s is forced to pay %s power units in reparations' % (i, reparations))
+            logger.info('%s is forced to pay %s power units in reparations' % (i, round(reparations, 2)))
             # if a loser_state no longer has power, mark them as being conquered by leading state
             if i.power <= 0:
                 i.conquered = war['victor']
@@ -172,7 +172,7 @@ class InternationalSystem(object):
         for i in victor_states:
             reparations = total_reparations * (i.power / total_victor_power)
             i.power += reparations
-            logger.info('%s has claimed %s power units as spoils of war' % (i, reparations))
+            logger.info('%s has claimed %s power units as spoils of war' % (i, round(reparations, 2)))
 
 
     def end_turn(self):
@@ -185,8 +185,6 @@ class InternationalSystem(object):
         or the iteration limit is reached. Otherwise, grant all remaining states
          internal power growth of 3 percent. The simulation moves to segment.
         """
-
-        print('End turn')
         for k in list(self.world.keys()):
             if self.world[k].power <= 0:
                 print('State %s is removed from system' % k)
@@ -202,6 +200,13 @@ class InternationalSystem(object):
             else:
                 self.world[k].alliance = [self.world[k]]
                 self.world[k].power = self.world[k].power * (1 + self.config['growth_mu'])
+
+            # Update power0 assessments of themselvbes
+            power = self.world[k].power
+            power0 = power * np.random.normal(loc=1, scale=self.config['misperception_sigma'])
+            self.world[k].power0 = power0
+
+        logger.info('Turn ended')
                          
 
     def random_power(self):
@@ -210,11 +215,11 @@ class InternationalSystem(object):
 
         Generates a random number from a normal distribution with a mean and
         standard deviation specified in the config file. Does not permit power
-        to fall below zero.
+        to fall below one.
         """
         power_init = np.random.normal(loc=self.config['power_dist_mu'],
                                       scale=self.config['power_dist_sigma'])
-        power = max(power_init, 0)
+        power = max(power_init, 1)
         return power
 
     def plot_power(self):

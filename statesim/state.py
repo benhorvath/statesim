@@ -12,8 +12,10 @@ class State(object):
 
     def __init__(self, name, power, misperception=0.2):
         self.name = name
-        self.power = power
         self.misperception = misperception
+        self.power = power
+        self.power0 = self.power * np.random.normal(loc=1,
+                                                    scale=self.misperception)
         self.border = []
         self.alliance = [self]
         self.conquered = None
@@ -30,10 +32,10 @@ class State(object):
         such that it is the minimal winning coalition.
         """
         against_power_est = self.estimate_alliance(against)
-        bordering_states = [i for i in against.border if i != self and i not in self.alliance]
+        bordering_states = [i for i in against.border if i not in self.alliance and i not in against.alliance]
 
         if len(bordering_states) == 0:
-            return None
+            return []
 
         bordering_states.sort()
         # potential_alliance = [self, bordering_states[0]]
@@ -53,6 +55,11 @@ class State(object):
         """
         print('%s proposes alliance to %s' % (self, to)),
         logger.info('%s proposes alliance to %s' % (self, to))
+
+        if to in against.alliance:
+            logger.info('%s is already allied, rejects offer of alliance from %s' % (to, self))
+            return False
+
         # Estimate enemy alliance
         against_est_power = to.estimate_alliance(against)
 
