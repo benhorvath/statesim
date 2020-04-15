@@ -13,6 +13,8 @@ import logging
 import sys
 import yaml
 
+import pandas as pd
+
 from statesim.system import InternationalSystem
 from statesim.state import State
 
@@ -91,9 +93,13 @@ if __name__ == '__main__':
 
     world = InternationalSystem(config=config)
 
-for i in range(1, 5):
+    state_power = pd.DataFrame(columns=[0, 1, 2])
+
+for i in range(1, 10):
 
     print('Iteration no. %s' % i)
+
+    state_power = state_power.append( pd.DataFrame([(i, j.name, j.power) for j in world.world.values()]) )
 
     # Randomly select state
     state = world.random_state()
@@ -103,7 +109,8 @@ for i in range(1, 5):
 
     state_est_target = state.estimate_power(target)
     if state_est_target > state.power0:
-        world.end_turn()#; break
+        world.end_turn()
+        continue
 
     # Targetted state looks for allies
     # Target estimates the power of the iniating state
@@ -122,7 +129,8 @@ for i in range(1, 5):
     if state_est_target < state.power0:
         war = world.war(state, target)
         world.assess_war_damage(war)
-        world.end_turn()  # ; break
+        world.end_turn()
+        continue
     else:
         state_potential_alliance = state.seek_allies(against=target)
         for ally in state_potential_alliance:
@@ -132,7 +140,8 @@ for i in range(1, 5):
                                        against=target)
         # if there are any rejections, state backs down
         if len(state.alliance) < len(state_potential_alliance):
-            world.end_turn()  #; break
+            world.end_turn()
+            continue
 
     # Target re-estimates its alliance, and state's alliance; if weaker,
     # seek more allies

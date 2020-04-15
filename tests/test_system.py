@@ -8,7 +8,7 @@ from statesim.system import InternationalSystem
 config = {'seed': 1804,
           'niter': 500,
           'network_n': 98,
-          'network_p': 0.2,
+          'network_p': 8,
           'power_dist_mu': 10.0,
           'power_dist_sigma': 3.33,
           'misperception_sigma': 0.2,

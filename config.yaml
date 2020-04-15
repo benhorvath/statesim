@@ -2,7 +2,7 @@
 seed: 1804
 niter: 500
 network_n: 98
-network_p: 0.20
+network_p: 8
 power_dist_mu: 10.0
 power_dist_sigma: 3.33
 misperception_sigma: 0.2
@@ -10,5 +10,5 @@ victory_sigma: 1.0
 max_war_cost: 0.25
 war_cost_disp: 0.125
 reparations: 0.2
-growth_mu: 0.03
-growth_sigma: 0.01
+growth_mu: 0.02
+growth_sigma: 0.015

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#
+# TODO: __rep__: Number of states, basic states about power
 #
 #
 import logging
@@ -58,7 +58,9 @@ class InternationalSystem(object):
         The initial power distribution is calculated and assigned to each state.
         """
 
-        network = nx.random_regular_graph(8, 96, seed=self.config['seed'])
+        network = nx.random_regular_graph(self.config['network_p'],
+                                          self.config['network_n'],
+                                          seed=self.config['seed'])
 
         # Initialize all states
         world = {}
@@ -80,8 +82,11 @@ class InternationalSystem(object):
         """ """
         # Wipe out existing borders
         for i in self.world.keys():
-            neighbors = [j for j in self.network.neighbors(i)]
-            self.world[i].border = [self.world[j] for j in neighbors]
+            try:
+                neighbors = [j for j in self.network.neighbors(i)]
+                self.world[i].border = [self.world[j] for j in neighbors]
+            except KeyError:
+                raise
 
     def likelihood_victory(self, a, b):
         """ Returns the probability state A wins a war against state B.
@@ -143,28 +148,27 @@ class InternationalSystem(object):
         war_cost = (1.0 - ((lsr - 0.5) / 0.5)) * max_cost
         weight = min(self.config['war_cost_disp'], max_cost * np.random.uniform())
 
-        victor_states = [war['victor']] + war['victor'].alliance
-        loser_states = [war['loser']] + war['loser'].alliance
+        victor_states = war['victor'].alliance
+        loser_states = war['loser'].alliance
 
         for i in victor_states:
             cost = max(war_cost - weight, 0.01)
-            i.power = i.power * (1 - cost)
+            i.power = max(i.power * (1 - cost), 1)  # do not let victors fall below 1
             logger.info('%s assessed war damage of %s percent' % (i, round(cost, 2)*100))
 
         for i in loser_states:
-            cost = war_cost + weight
+            cost = min(1, war_cost + weight)
             i.power = i.power * (1 - cost)
             logger.info('%s assessed war damage of %s percent' % (i, round(cost, 2)*100))
 
         # Spoils -- TODO seperate function
         total_reparations = sum( [i.power * self.config['reparations'] for i in loser_states] )
+        print('TOTAL REPARATIONS: %s' % total_reparations)
+        print('LOSER STATES: %s' % loser_states)
         for i in loser_states:
-            reparations = i.power * self.config['reparations']
+            reparations = max(i.power * self.config['reparations'], .01)
             i.power = i.power - reparations
             logger.info('%s is forced to pay %s power units in reparations' % (i, round(reparations, 2)))
-            # if a loser_state no longer has power, mark them as being conquered by leading state
-            if i.power <= 0:
-                i.conquered = war['victor']
 
         # Each victor recieves a portion of spoils, proportionate to their
         # contribution to total power of alliance
@@ -173,6 +177,10 @@ class InternationalSystem(object):
             reparations = total_reparations * (i.power / total_victor_power)
             i.power += reparations
             logger.info('%s has claimed %s power units as spoils of war' % (i, round(reparations, 2)))
+
+        for k in self.world.keys():
+            if self.world[k].power < 1.0:
+                self.world[k].conquered = war['victor']
 
 
     def end_turn(self):
@@ -186,25 +194,29 @@ class InternationalSystem(object):
          internal power growth of 3 percent. The simulation moves to segment.
         """
         for k in list(self.world.keys()):
-            if self.world[k].power <= 0:
+            if self.world[k].power < 1:
                 print('State %s is removed from system' % k)
                 # If conquered, give borders to conquering state and delete from system
                 n = k
-                neighbors = [j for j in self.network.neighbors(n)]
-                new_borders = [j for j in neighbors if j != k]
+                neighbors = [j for j in self.network.neighbors(n) if self.world[j].power >= 1]
+                new_borders = [j for j in neighbors if j != k and self.world[j].power >= 1]
                 for j in new_borders:
                     self.network.add_edge(self.world[k].conquered.name, j)
-                self.network.remove_node(n)
-                del self.world[n]
-                self.draw_borders(self.network)
+                self.network.remove_node(k)
+                del self.world[k]
+                print(k in self.world.keys())
             else:
                 self.world[k].alliance = [self.world[k]]
-                self.world[k].power = self.world[k].power * (1 + self.config['growth_mu'])
+                growth = np.random.normal(loc=self.config['growth_mu'],
+                                          scale=self.config['growth_sigma'])
+                self.world[k].power = max(self.world[k].power * (1 + growth), 1)  # cannot grow below 0
 
-            # Update power0 assessments of themselvbes
-            power = self.world[k].power
-            power0 = power * np.random.normal(loc=1, scale=self.config['misperception_sigma'])
-            self.world[k].power0 = power0
+                # Update power0 assessments of themselves
+                power = self.world[k].power
+                power0 = power * np.random.normal(loc=1, scale=self.config['misperception_sigma'])
+                self.world[k].power0 = power0
+
+        self.draw_borders(self.network)
 
         logger.info('Turn ended')
                          
