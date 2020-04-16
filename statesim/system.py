@@ -163,8 +163,6 @@ class InternationalSystem(object):
 
         # Spoils -- TODO seperate function
         total_reparations = sum( [i.power * self.config['reparations'] for i in loser_states] )
-        print('TOTAL REPARATIONS: %s' % total_reparations)
-        print('LOSER STATES: %s' % loser_states)
         for i in loser_states:
             reparations = max(i.power * self.config['reparations'], .01)
             i.power = i.power - reparations
@@ -195,7 +193,7 @@ class InternationalSystem(object):
         """
         for k in list(self.world.keys()):
             if self.world[k].power < 1:
-                print('State %s is removed from system' % k)
+                logger.info('State %s is removed from system' % k)
                 # If conquered, give borders to conquering state and delete from system
                 n = k
                 neighbors = [j for j in self.network.neighbors(n) if self.world[j].power >= 1]
@@ -204,7 +202,6 @@ class InternationalSystem(object):
                     self.network.add_edge(self.world[k].conquered.name, j)
                 self.network.remove_node(k)
                 del self.world[k]
-                print(k in self.world.keys())
             else:
                 self.world[k].alliance = [self.world[k]]
                 growth = np.random.normal(loc=self.config['growth_mu'],

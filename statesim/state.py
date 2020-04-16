@@ -1,5 +1,5 @@
 #
-
+from itertools import combinations
 import logging
 
 import numpy as np
@@ -32,21 +32,41 @@ class State(object):
         such that it is the minimal winning coalition.
         """
         against_power_est = self.estimate_alliance(against)
-        bordering_states = [i for i in against.border if i not in self.alliance and i not in against.alliance]
 
-        if len(bordering_states) == 0:
-            return []
+        all_alliances = []
+        potential_allies = [i for i in against.border if i not in self.alliance and i not in against.alliance]
 
-        bordering_states.sort()
-        # potential_alliance = [self, bordering_states[0]]
-        potential_alliance = self.alliance + [bordering_states[0]]
-        for i in bordering_states[1:]:
-            i_power_est = self.estimate_power(i)
-            if sum(potential_alliance) < against_power_est:
-                potential_alliance.append(i)
-            else:
-                break
-        return potential_alliance
+        for i in range(len(potential_allies) + 1):
+            for c in combinations(potential_allies, i):
+                all_alliances.append((self, *c))
+
+        alliances_power = np.array([sum(i) for i in all_alliances])
+
+        winning_alliances = np.where(alliances_power <= sum(against.alliance), np.inf, alliances_power)
+
+        ix = np.argmin(winning_alliances)
+        mwc = all_alliances[ix]
+
+        return [i for i in mwc]
+
+
+        ###
+        # bordering_states = [i for i in against.border if i not in self.alliance and i not in against.alliance]
+
+        # if len(bordering_states) == 0:
+        #     return []
+
+        # bordering_states.sort()
+        # # potential_alliance = [self, bordering_states[0]]
+        # potential_alliance = self.alliance + [bordering_states[0]]
+        # for i in bordering_states[1:]:
+        #     i_power_est = self.estimate_power(i)
+        #     if sum(potential_alliance) < against_power_est:
+        #         potential_alliance.append(i)
+        #     else:
+        #         break
+        # return potential_alliance
+        ####
 
     def propose_alliance(self, to, alliance, against):
         """ State proposes to another state, to, a potential alliance,
