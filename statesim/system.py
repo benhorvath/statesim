@@ -129,6 +129,8 @@ class InternationalSystem(object):
 
         return {'victor': a if victory == True else b,
                 'loser': b if victory == True else a,
+                'offense': a,
+                'defense': b,
                 'likelihood_victory': lv,
                 'lsr': max(a.power, b.power) / (a.power + b.power)}
 
@@ -150,6 +152,26 @@ class InternationalSystem(object):
 
         victor_states = war['victor'].alliance
         loser_states = war['loser'].alliance
+
+        #################
+        # Versailles rule
+
+        if self.config['versailles']:
+
+            # if state is victor:
+            if war['victor'] == war['offense']:
+            # target surrenders LV% of power
+                transfer = war['loser'].power * war['likelihood_victory']
+                war['loser'].power = war['loser'].power - transfer
+                war['victor'].power += transfer
+            # elif target is victor:
+            elif war['victor'] == war['defense']:
+            # state surrenders 1-LV % of power
+                transfer = war['victor'].power * (1 - war['likelihood_victory'])
+                war['victor'].power = war['victor'].power - transfer
+                war['loser'].power += transfer
+
+        #################
 
         for i in victor_states:
             cost = max(war_cost - weight, 0.01)

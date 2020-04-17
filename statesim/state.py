@@ -1,5 +1,5 @@
 #
-from itertools import combinations
+from itertools import combinations, islice
 import logging
 
 import numpy as np
@@ -25,7 +25,8 @@ class State(object):
         """
         power_diff = [self.power - i.power for i in self.border]
         target_ix = np.argmax(power_diff)
-        return self.border[target_ix]
+        target = self.border[target_ix]
+        return target if target != self else None
 
     def seek_allies(self, against):
         """ Returns list of states that border the state specified as against,
@@ -37,9 +38,16 @@ class State(object):
         potential_allies = [i for i in against.border if i not in self.alliance and i not in against.alliance]
 
         for i in range(len(potential_allies) + 1):
+            counter = 0
             for c in combinations(potential_allies, i):
-                all_alliances.append((self, *c))
+                if counter < 100:
+                    all_alliances.append((self, *c))
+                    counter += 1
+                else:
+                    break
 
+        # n = min(len(all_alliances), 1000)
+        # alliances_power = np.array([sum(i) for i in all_alliances[0:n]])
         alliances_power = np.array([sum(i) for i in all_alliances])
 
         winning_alliances = np.where(alliances_power <= sum(against.alliance), np.inf, alliances_power)

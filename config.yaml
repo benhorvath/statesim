@@ -12,3 +12,4 @@ war_cost_disp: 0.125
 reparations: 0.2
 growth_mu: 0.02
 growth_sigma: 0.015
+versailles: true
