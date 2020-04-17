@@ -84,6 +84,9 @@ class State(object):
         print('%s proposes alliance to %s' % (self, to)),
         logger.info('%s proposes alliance to %s' % (self, to))
 
+        if to == self:
+            raise ValueError('%s cannot propose alliance to itself' % self)
+
         if to in against.alliance:
             logger.info('%s is already allied, rejects offer of alliance from %s' % (to, self))
             return False
@@ -94,13 +97,6 @@ class State(object):
         # Estimate proposed alliance -- to should not estimate its own power
         other_allies = [i for i in alliance if i != to]
         alliance_est_power = to.estimate_alliance(other_allies) + to.power
-
-        # if against.alliance == []:
-        #     against_est_power = to.estimate_power(against)
-        # else:
-        #     against_est_power = to.estimate_power(against.alliance)
-        
-        # alliance_est_power = to.estimate_power(alliance)
 
         if alliance_est_power > against_est_power:
             logger.info('%s has accepted offer of alliance from %s' % (to, self))

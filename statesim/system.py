@@ -11,6 +11,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.integrate as integrate
+from scipy.stats import cauchy
 
 from statesim.state import State
 
@@ -226,8 +227,9 @@ class InternationalSystem(object):
                 del self.world[k]
             else:
                 self.world[k].alliance = [self.world[k]]
-                growth = np.random.normal(loc=self.config['growth_mu'],
-                                          scale=self.config['growth_sigma'])
+                # growth = np.random.normal(loc=self.config['growth_mu'],
+                #                           scale=self.config['growth_sigma'])
+                growth = self.random_growth()
                 self.world[k].power = max(self.world[k].power * (1 + growth), 1)  # cannot grow below 0
 
                 # Update power0 assessments of themselves
@@ -238,6 +240,19 @@ class InternationalSystem(object):
         self.draw_borders(self.network)
 
         logger.info('Turn ended')
+
+    def random_growth(self):
+        """ Cauchy distribution with barriers at -30 and 15 percent.
+        """
+        growth = cauchy.rvs(size=1, loc=self.config['growth_mu'],
+                            scale=self.config['growth_sigma'])[0]
+        if growth < -0.30:
+            return -0.30
+        elif growth > 0.15:
+            return 0.15
+        else:
+            return growth
+
                          
 
     def random_power(self):

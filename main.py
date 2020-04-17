@@ -4,6 +4,7 @@
 # Main script to run StateSim
 
 # TODO: Levy or other flat tailed distribution for economic growth/depression
+# TODO: Use appropriate algorithm/numpy arrays for alliance combinations
 # TODO: Something is still off with redrawing the network, do tests iwth 4 countries
 # TODO: Write tests, esepecially for alliance functions -- test handling of borders if state is conquered
 # TODO: Equip system with two data sets: One to monitor state level, the other system level
