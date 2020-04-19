@@ -27,146 +27,79 @@ logging.basicConfig(stream=sys.stdout,
                     format='%(levelname)s | %(asctime)s | %(name)s | %(''message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
 
-config = yaml.full_load( open('config.yaml') )
-
-world = InternationalSystem(config=config)
-
-# Randomly select state
-state = world.random_state()
-
-# State looks for a target state to pick on
-target = state.scan_targets()
-
-state_est_target = state.estimate_power(target)
-if state_est_target > state.power0:
-    world.end_turn()#; break
-
-# Targetted state looks for allies
-# Target estimates the power of the iniating state
-target_est_state = target.estimate_power(state)
-if target.power0 <= target_est_state:
-    target_potential_alliance = target.seek_allies(against=state)
-    for ally in target_potential_alliance:
-        if ally != target:
-            target.propose_alliance(to=ally,
-                                    alliance=target_potential_alliance,
-                                    against=state)
-
-# Re-estimate target's power; if remains less, war
-# Otherwise, search for an offensive alliance
-state_est_target = state.estimate_alliance(target)
-if state_est_target < state.power0:
-    war = world.war(state, target)
-    world.assess_war_damage(war)
-    world.end_turn()  # ; break
-else:
-    state_potential_alliance = state.seek_allies(against=target)
-    for ally in state_potential_alliance:
-        if ally != state:
-            state.propose_alliance(to=ally,
-                                   alliance=state_potential_alliance,
-                                   against=target)
-    # if there are any rejections, state backs down
-    if len(state.alliance) < len(state_potential_alliance):
-        world.end_turn()  #; break
-
-# Target re-estimates its alliance, and state's alliance; if weaker,
-# seek more allies
-target_est_alliance = target.estimate_alliance(target)
-target_est_state_alliance = target.estimate_alliance(state)
-if target_est_alliance < target_est_state_alliance:
-    target_potential_alliance = target.seek_allies(against=state)
-    propose_to = [i for i in target_potential_alliance if i not in target.alliance]
-    for ally in propose_to:
-        target.propose_alliance(to=ally, alliance=target_potential_alliance,
-                                against=state)
-
-# State compares balance of power one last time
-state_est_alliance = state.estimate_alliance(state)
-state_est_target_alliance = state.estimate_alliance(target)
-if state_est_alliance > state_est_target_alliance:
-    war = world.war(state, target)
-    world.assess_war_damage(war)
-
-world.end_turn()
-
 
 if __name__ == '__main__':
 
     config = yaml.full_load( open('config.yaml') )
 
-world = InternationalSystem(config=config)
+    world = InternationalSystem(config=config)
 
-state_power = pd.DataFrame(columns=[0, 1, 2])
+    state_power = pd.DataFrame(columns=[0, 1, 2])
 
-for i in range(1, 500):
+    for i in range(1, config.niter):
 
-    print('Iteration no. %s' % i)
+        print('Iteration no. %s' % i)
 
-    state_power = state_power.append( pd.DataFrame([(i, j.name, j.power) for j in world.world.values()]) )
+        state_power = state_power.append( pd.DataFrame([(i, j.name, j.power) for j in world.world.values()]) )
 
-    # Randomly select state
-    state = world.random_state()
+        # Randomly select state
+        state = world.random_state()
 
-    # State looks for a target state to pick on
-    target = state.scan_targets()
+        # State looks for a target state to pick on
+        target = state.scan_targets()
 
-    state_est_target = state.estimate_power(target)
-    if state_est_target > state.power0:
-        world.end_turn()
-        continue
-
-    # Targetted state looks for allies
-    # Target estimates the power of the iniating state
-    target_est_state = target.estimate_power(state)
-    if target.power0 <= target_est_state:
-        target_potential_alliance = target.seek_allies(against=state)
-        for ally in target_potential_alliance:
-            if ally != target:
-                target.propose_alliance(to=ally,
-                                        alliance=target_potential_alliance,
-                                        against=state)
-
-    # Re-estimate target's power; if remains less, war
-    # Otherwise, search for an offensive alliance
-    state_est_target = state.estimate_alliance(target)
-    if state_est_target < state.power0:
-        war = world.war(state, target)
-        world.assess_war_damage(war)
-        world.end_turn()
-        continue
-    else:
-        state_potential_alliance = state.seek_allies(against=target)
-        for ally in state_potential_alliance:
-            if ally != state:
-                state.propose_alliance(to=ally,
-                                       alliance=state_potential_alliance,
-                                       against=target)
-        # if there are any rejections, state backs down
-        if len(state.alliance) < len(state_potential_alliance):
+        state_est_target = state.estimate_power(target)
+        if state_est_target > state.power0:
             world.end_turn()
             continue
 
-    # Target re-estimates its alliance, and state's alliance; if weaker,
-    # seek more allies
-    target_est_alliance = target.estimate_alliance(target)
-    target_est_state_alliance = target.estimate_alliance(state)
-    if target_est_alliance < target_est_state_alliance:
-        target_potential_alliance = target.seek_allies(against=state)
-        propose_to = [i for i in target_potential_alliance if i not in target.alliance]
-        for ally in propose_to:
-            target.propose_alliance(to=ally, alliance=target_potential_alliance,
-                                    against=state)
+        # Targetted state looks for allies
+        # Target estimates the power of the iniating state
+        target_est_state = target.estimate_power(state)
+        if target.power0 <= target_est_state:
+            target_potential_alliance = target.seek_allies(against=state)
+            for ally in target_potential_alliance:
+                if ally != target:
+                    target.propose_alliance(to=ally,
+                                            alliance=target_potential_alliance,
+                                            against=state)
 
-    # State compares balance of power one last time
-    state_est_alliance = state.estimate_alliance(state)
-    state_est_target_alliance = state.estimate_alliance(target)
-    if state_est_alliance > state_est_target_alliance:
-        war = world.war(state, target)
-        world.assess_war_damage(war)
+        # Re-estimate target's power; if remains less, war
+        # Otherwise, search for an offensive alliance
+        state_est_target = state.estimate_alliance(target)
+        if state_est_target < state.power0:
+            war = world.war(state, target)
+            world.assess_war_damage(war)
+            world.end_turn()
+            continue
+        else:
+            state_potential_alliance = state.seek_allies(against=target)
+            for ally in state_potential_alliance:
+                if ally != state:
+                    state.propose_alliance(to=ally,
+                                           alliance=state_potential_alliance,
+                                           against=target)
+            # if there are any rejections, state backs down
+            if len(state.alliance) < len(state_potential_alliance):
+                world.end_turn()
+                continue
 
-    world.end_turn()
+        # Target re-estimates its alliance, and state's alliance; if weaker,
+        # seek more allies
+        target_est_alliance = target.estimate_alliance(target)
+        target_est_state_alliance = target.estimate_alliance(state)
+        if target_est_alliance < target_est_state_alliance:
+            target_potential_alliance = target.seek_allies(against=state)
+            propose_to = [i for i in target_potential_alliance if i not in target.alliance]
+            for ally in propose_to:
+                target.propose_alliance(to=ally, alliance=target_potential_alliance,
+                                        against=state)
 
-POWER = [world.world[k].power for k in world.world.keys()]
-np.mean(POWER)
-#np.std(POWER)
+        # State compares balance of power one last time
+        state_est_alliance = state.estimate_alliance(state)
+        state_est_target_alliance = state.estimate_alliance(target)
+        if state_est_alliance > state_est_target_alliance:
+            war = world.war(state, target)
+            world.assess_war_damage(war)
+
+        world.end_turn()
