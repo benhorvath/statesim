@@ -3,14 +3,14 @@
 
 # Main script to run StateSim
 
-# TODO: Levy or other flat tailed distribution for economic growth/depression
+# TODO: Config logger
 # TODO: Use appropriate algorithm/numpy arrays for alliance combinations
 # TODO: Something is still off with redrawing the network, do tests iwth 4 countries
 # TODO: Write tests, esepecially for alliance functions -- test handling of borders if state is conquered
-# TODO: Equip system with two data sets: One to monitor state level, the other system level
+# TODO: Equip system with three data sets: One to monitor state level, the other system level
 #       These can be converted to Pandas and exported, after end of 500 runs
+#       One to monitor war
 # TODO: system: break network and .world into two functions, restore self.world = f() to __init__, after network initialization
-# TODO: Slight mod of reparations/etc: Winning a war never sets you below 1 (DONE?)
 
 
 import logging
@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     state_power = pd.DataFrame(columns=[0, 1, 2])
 
-    for i in range(1, config.niter):
+    for i in range(1, config['niter']):
 
         print('Iteration no. %s' % i)
 

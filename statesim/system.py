@@ -84,7 +84,7 @@ class InternationalSystem(object):
         # Wipe out existing borders
         for i in self.world.keys():
             try:
-                neighbors = [j for j in self.network.neighbors(i)]
+                neighbors = [j for j in self.network.neighbors(i) if j != i]
                 self.world[i].border = [self.world[j] for j in neighbors]
             except KeyError:
                 raise
