@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# TODO: __rep__: Number of states, basic states about power
-#
-#
 import logging
 import random
 
@@ -16,6 +13,7 @@ from scipy.stats import cauchy
 from statesim.state import State
 
 logger = logging.getLogger(__name__)
+
 
 class InternationalSystem(object):
     """ Main object controlling the simulation.
@@ -41,12 +39,12 @@ class InternationalSystem(object):
             houses parameters governing the simulation
         """
         self.config = config
+        self.turn = 0
+        self.state = []
+        self.system = []
+        self.wars = []
         self.network = self.generate_world()
-        # TODO:
-        # self.network = self.generate_network()
-        # self.world = self.generate_world()  # builds sates, including self.draw_borders
-
-
+        
         self.draw_borders(self.network)
 
     def generate_world(self):
@@ -71,6 +69,19 @@ class InternationalSystem(object):
             world[i] = state
 
         self.world = world
+
+        # Record initial distribution of power
+        power_dist = np.array([i.power for i in world.values()])
+        first_turn = {'turn': 0,
+                      'n': len(world),
+                      'min': np.min(power_dist),
+                      'p25': np.percentile(power_dist, 0.25),
+                      'p50': np.percentile(power_dist, 0.5),
+                      'p75': np.percentile(power_dist, 0.75),
+                      'max': np.max(power_dist),
+                      'avg': np.mean(power_dist),
+                      'sd': np.std(power_dist)}
+        self.system.append(first_turn)
 
         return network
 
@@ -115,6 +126,23 @@ class InternationalSystem(object):
             lv = lv_init
         return lv
 
+    def record_peace(self, a, b):
+        """ Records outcomes where no war occurs to war data set.
+        """
+        peace = {'turn': self.turn,
+                 'war': False,
+                 'offense': a.name,
+                 'defense': b.name,
+                 'offense0': a.power,
+                 'defense0': b.power,
+                 'offense1': sum([i.power for i in a.alliance]),
+                 'defense1': sum([i.power for i in b.alliance]),
+                 'outcome': 'NA'}
+
+        self.wars.append(peace)
+
+        return None
+
     def war(self, a, b):
         """ Determines which side wins the war. Returns object specifying data,
         about the war, which is then used to determine war costs, etc.
@@ -127,6 +155,17 @@ class InternationalSystem(object):
         """
         lv = self.likelihood_victory(a, b)
         victory = bool( np.random.binomial(1, lv, 1) )
+
+        war = {'turn': self.turn,
+               'war': True,
+               'offense': a.name,
+               'defense': b.name,
+               'offense0': a.power,
+               'defense0': b.power,
+               'offense1': sum([i.power for i in a.alliance]),
+               'defense1': sum([i.power for i in b.alliance]),
+               'outcome': a.name if victory == True else b.name}
+        self.wars.append(war)
 
         return {'victor': a if victory == True else b,
                 'loser': b if victory == True else a,
@@ -217,6 +256,13 @@ class InternationalSystem(object):
         for k in list(self.world.keys()):
             if self.world[k].power < 1:
                 logger.info('State %s is removed from system' % k)
+
+                # Record state death
+                # STATE: state ID | turn death |
+                death = {'state_id': k,
+                         'survived_to': self.turn}
+                self.state.append(death)
+
                 # If conquered, give borders to conquering state and delete from system
                 n = k
                 neighbors = [j for j in self.network.neighbors(n) if self.world[j].power >= 1]
@@ -238,6 +284,19 @@ class InternationalSystem(object):
                 self.world[k].power0 = power0
 
         self.draw_borders(self.network)
+
+        # Record distribution of power
+        power_dist = np.array([i.power for i in self.world.values()])
+        power_record = {'turn': self.turn,
+                        'n': len(self.world),
+                        'min': np.min(power_dist),
+                        'p25': np.percentile(power_dist, 0.25),
+                        'p50': np.percentile(power_dist, 0.5),
+                        'p75': np.percentile(power_dist, 0.75),
+                        'max': np.max(power_dist),
+                        'avg': np.mean(power_dist),
+                        'sd': np.std(power_dist)}
+        self.system.append(power_record)
 
         logger.info('Turn ended')
 

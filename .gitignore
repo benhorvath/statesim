@@ -1,5 +1,13 @@
 .DS_Store
 
+# Don't include all data
+data/config/*
+data/error/*
+data/state/*
+data/system/*
+data/wars/*
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

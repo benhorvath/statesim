@@ -36,15 +36,17 @@ class State(object):
 
         all_alliances = []
         potential_allies = [i for i in against.border if i not in self.alliance and i not in against.alliance]
-
         for i in range(len(potential_allies) + 1):
             counter = 0
             for c in combinations(potential_allies, i):
                 if counter < 100:
-                    all_alliances.append((self, *c))
+                    c_list = [j for j in c]
+                    all_alliances.append(self.alliance + c_list)
                     counter += 1
                 else:
                     break
+
+        # Add in existing alliance
 
         # n = min(len(all_alliances), 1000)
         # alliances_power = np.array([sum(i) for i in all_alliances[0:n]])
@@ -55,7 +57,7 @@ class State(object):
         ix = np.argmin(winning_alliances)
         mwc = all_alliances[ix]
 
-        return [i for i in mwc]
+        return mwc
 
 
         ###

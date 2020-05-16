@@ -3,23 +3,34 @@
 
 # Main script to run StateSim
 
+# TODO: Think about redoing main loop, make it easier to read, smaller var names
 # TODO: Config logger
 # TODO: Use appropriate algorithm/numpy arrays for alliance combinations
-# TODO: Something is still off with redrawing the network, do tests iwth 4 countries
-# TODO: Write tests, esepecially for alliance functions -- test handling of borders if state is conquered
 # TODO: Equip system with three data sets: One to monitor state level, the other system level
 #       These can be converted to Pandas and exported, after end of 500 runs
 #       One to monitor war
 # TODO: system: break network and .world into two functions, restore self.world = f() to __init__, after network initialization
 
+# Simulation control file:
+#   configs = [ {}, {}, {}, ...] All configs we want
+#   for config in configs:
+#       ...  # run simulation
+#       world.reports.state.to_csv('')
+#       world.reports.system.to_csv('')
+#       world.reports.war.to_csv('')
 
+from datetime import datetime
+from itertools import product
+import json
 import logging
+import random
 import sys
 import yaml
 
 import pandas as pd
 
 from statesim.system import InternationalSystem
+from statesim.sim import Simulation
 from statesim.state import State
 
 logging.basicConfig(stream=sys.stdout,
@@ -27,79 +38,64 @@ logging.basicConfig(stream=sys.stdout,
                     format='%(levelname)s | %(asctime)s | %(name)s | %(''message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
 
+def expand_grid(dictionary):
+    """ Quick function similar to expand.grid in R, used to create a
+    config matrix"""
+    return pd.DataFrame([row for row in product(*dictionary.values())], 
+                        columns=dictionary.keys())
+
 
 if __name__ == '__main__':
 
-    config = yaml.full_load( open('config.yaml') )
+    # Set up matrix of config options
+    config_dict = {'seed': [1804],
+               'niter': [1000],
+               'network_n': [98],
+               'network_p': [8],
+               'power_dist_mu': [10.0],
+               'power_dist_sigma': [1.67, 3.33, 6.67],
+               'misperception_sigma': [0.1, 0.2, 0.4],
+               'victory_sigma': [1.0, 3.0, 5.0],
+               'max_war_cost': [0.05, 0.1, 0.2],
+               'war_cost_disp': [0.05, 0.10, 0.15],
+               'reparations': [0.1, 0.2, 0.3],
+               'growth_mu': [0.005, 0.01, 0.03],
+               'growth_sigma': [0.01, 0.025, 0.05],
+               'versailles': [True, False]}
+    configs = expand_grid(config_dict)
 
-    world = InternationalSystem(config=config)
+    # Iterate over each config setting
+    for config in configs.to_dict(orient='row'):
 
-    state_power = pd.DataFrame(columns=[0, 1, 2])
+        config['seed'] = random.randint(1, 10e6)
 
-    for i in range(1, config['niter']):
+        SIM_ID = datetime.now().strftime('%Y%m%dt%H%M%S')
 
-        print('Iteration no. %s' % i)
+        try:
 
-        state_power = state_power.append( pd.DataFrame([(i, j.name, j.power) for j in world.world.values()]) )
+            sim = Simulation(config=config)
+            sim.run()
 
-        # Randomly select state
-        state = world.random_state()
+            # Save config
+            config['sim_id'] = SIM_ID
+            with open('./data/config/config_%s.json' % SIM_ID, 'w+') as f:
+                f.write(json.dumps(config))
 
-        # State looks for a target state to pick on
-        target = state.scan_targets()
+            # Save simulation results
+            sim.state['sim_id'] = SIM_ID
+            sim.system['sim_id'] = SIM_ID
+            sim.wars['sim_id'] = SIM_ID
 
-        state_est_target = state.estimate_power(target)
-        if state_est_target > state.power0:
-            world.end_turn()
+            sim.state.to_csv('./data/state/state_%s.csv' % SIM_ID, index=False)
+            sim.system.to_csv('./data/system/system_%s.csv' % SIM_ID, index=False)
+            sim.wars.to_csv('./data/wars/wars_%s.csv' % SIM_ID, index=False)
+
+        except:
+
+            # Save config as error, and resume simulation
+            config['sim_id'] = SIM_ID
+            with open('./data/error/config_%s.json' % SIM_ID, 'w+') as f:
+                f.write(json.dumps(config))
+
             continue
 
-        # Targetted state looks for allies
-        # Target estimates the power of the iniating state
-        target_est_state = target.estimate_power(state)
-        if target.power0 <= target_est_state:
-            target_potential_alliance = target.seek_allies(against=state)
-            for ally in target_potential_alliance:
-                if ally != target:
-                    target.propose_alliance(to=ally,
-                                            alliance=target_potential_alliance,
-                                            against=state)
-
-        # Re-estimate target's power; if remains less, war
-        # Otherwise, search for an offensive alliance
-        state_est_target = state.estimate_alliance(target)
-        if state_est_target < state.power0:
-            war = world.war(state, target)
-            world.assess_war_damage(war)
-            world.end_turn()
-            continue
-        else:
-            state_potential_alliance = state.seek_allies(against=target)
-            for ally in state_potential_alliance:
-                if ally != state:
-                    state.propose_alliance(to=ally,
-                                           alliance=state_potential_alliance,
-                                           against=target)
-            # if there are any rejections, state backs down
-            if len(state.alliance) < len(state_potential_alliance):
-                world.end_turn()
-                continue
-
-        # Target re-estimates its alliance, and state's alliance; if weaker,
-        # seek more allies
-        target_est_alliance = target.estimate_alliance(target)
-        target_est_state_alliance = target.estimate_alliance(state)
-        if target_est_alliance < target_est_state_alliance:
-            target_potential_alliance = target.seek_allies(against=state)
-            propose_to = [i for i in target_potential_alliance if i not in target.alliance]
-            for ally in propose_to:
-                target.propose_alliance(to=ally, alliance=target_potential_alliance,
-                                        against=state)
-
-        # State compares balance of power one last time
-        state_est_alliance = state.estimate_alliance(state)
-        state_est_target_alliance = state.estimate_alliance(target)
-        if state_est_alliance > state_est_target_alliance:
-            war = world.war(state, target)
-            world.assess_war_damage(war)
-
-        world.end_turn()
