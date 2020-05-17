@@ -1,0 +1,239 @@
+---
+title: "A simulation of state systems"
+author: "Benjamin Horvath"
+date: "May 2020"
+abstract: "This document provides an introduction to R Markdown, argues for its..."
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+fontsize: 11pt
+geometry: false
+fontfamily: mathpazo
+fontfamilyoptions: osf,sc
+linestretch: 1.05
+header-includes:
+  \usepackage{eulervm}
+  \let\vec\mathbf
+---
+
+```{r setup, include=FALSE}
+options(digits=4)
+knitr::opts_chunk$set(echo = TRUE)
+
+setwd('~/Dropbox/Documents/school/grad/609/statesim/statesim')
+
+library(dplyr)
+library(ggplot2)
+library(jsonlite)
+library(survival)
+library(survminer)
+```
+
+
+
+# Introduction
+
+* General interest of research
+
+* Background of the other researchers
+
+* Roadmap of the rest of the paper
+
+* Github and technical notes
+
+
+
+
+
+
+
+# What is a state system?
+
+Description and history of state system concept
+
+Hypotheses to be explored:
+
+
+
+
+
+
+
+
+# The Simulation
+
+
+
+
+
+
+
+# Results
+
+```{r}
+# Read configs
+config_paths <- dir('./data/config/', pattern='*.json', full.names=TRUE)
+config_files <- lapply(config_paths, function(x) as.data.frame(fromJSON(x, flatten=TRUE)))
+config <- do.call(rbind, config_files)
+
+# Read state files
+state_paths <- dir('./data/state/', pattern='*.csv', full.names=TRUE)
+state <- Reduce(rbind, lapply(state_paths, read.csv, stringsAsFactors=FALSE))
+
+# Read system files
+system_paths <- dir('./data/system/', pattern='*.csv', full.names=TRUE)
+system <- Reduce(rbind, lapply(system_paths, read.csv, stringsAsFactors=FALSE))
+
+# Read system files
+war_paths <- dir('./data/wars/', pattern='*.csv', full.names=TRUE)
+war <- Reduce(rbind, lapply(war_paths, read.csv, stringsAsFactors=FALSE))
+```
+
+## State Survival
+
+```{r}
+state$status <- 1
+state_fit <- survfit(Surv(survived_to, status) ~ 1, data=state)
+
+print(state_fit)
+
+ggsurvplot(state_fit, data=state)
+```
+
+
+```{r}
+state_x <- merge(state, config, by='sim_id')
+state_x$status <- 1
+
+surv_object <- Surv(time=state$survived_to, event=state$status)
+
+state_m <- coxph(surv_object ~ power_dist_sigma + misperception_sigma +
+                   victory_sigma + max_war_cost + war_cost_disp + reparations +
+                   growth_mu + growth_sigma + versailles, data=state_x)
+
+ggforest(state_m, data=state_x)
+
+```
+
+Investigate top three variables: Growth mu, growth sigma, and versailles
+
+```{r}
+
+state_fit2 <- survfit(Surv(survived_to, status) ~ as.factor(versailles) + as.factor(growth_sigma), data=state_x)
+ggsurvplot(state_fit2, data=state_x)
+print(state_fit2)
+```
+
+
+## System Survival
+
+```{r}
+system_surv <- system %>%
+  group_by(sim_id) %>%
+  summarise(survived_to=max(turn)) %>%
+  mutate(status = 1)
+
+system_fit <- survfit(Surv(survived_to, status) ~ 1, data=system_surv)
+
+print(system_fit)
+
+ggsurvplot(system_fit, data=system_surv)
+
+table(system_surv$survived_to >= 999)
+```
+
+
+Survival analysis:
+
+```{r}
+system_x <- merge(system_surv, config, by='sim_id')
+
+surv_object <- Surv(time=system_x$survived_to, event=system_x$status)
+
+system_m <- coxph(surv_object ~ power_dist_sigma + misperception_sigma +
+                   victory_sigma + max_war_cost + war_cost_disp + reparations +
+                   growth_mu + growth_sigma + versailles, data=system_x)
+
+ggforest(system_m, data=system_x)
+
+```
+
+
+
+## Wars
+
+What increases/decreases war? Ratio of wars that didn't happen v. wars that did happen:
+
+```{r}
+balancing <- war %>%
+  group_by(sim_id, is.na(outcome)) %>%
+  summarise(conflicts=n()) %>%
+  tidyr::spread(`is.na(outcome)`, conflicts) %>%
+  set_colnames(c('sim_id', 'war', 'peace')) %>%
+  mutate(peace2war = peace / war) %>%
+  left_join(config, by='sim_id')
+
+war_peace_m <- lm(peace2war ~ power_dist_sigma + misperception_sigma +
+                   victory_sigma + max_war_cost + war_cost_disp + reparations +
+                   growth_mu + growth_sigma + versailles, data=balancing)
+
+plot(predict(war_peace_m), resid(war_peace_m), col=as.factor(balancing$war_cost_disp))
+
+car::marginalModelPlots(war_peace_m)
+
+```
+
+
+
+
+## Variance within system
+
+What increases/decreases this?
+
+* Interesting, sd_t is a parabola for some, and a straight line for others!
+
+```{r}
+sd_t <- system %>%
+  filter(sd > 0, avg > 0) %>%
+  mutate(sd_t = sd / avg)
+
+SIM_IDS = unique(sd_t$sim_id)
+                 
+x <- sd_t %>% filter(sim_id == '20200517t015736')
+scatter.smooth(x$turn, x$sd_t)
+
+max_sd_t <- sd_t %>%
+  group_by(sim_id) %>%
+  summarise(max_sd_t = max(sd_t)) %>%
+  left_join(config, by='sim_id')
+
+max_sd_m <- lm(max_sd_t ~ power_dist_sigma + misperception_sigma +
+                   victory_sigma + max_war_cost + war_cost_disp + reparations +
+                   growth_mu + growth_sigma + versailles, data=max_sd_t)
+
+```
+
+
+
+
+
+# Conclusion
+
+
+
+
+
+
+# References
+
+For code, see this project's GitHub page at: https://github.com/benhorvath/statesim/.
+
+* 
+
+
+
+
+
+
+

@@ -1,11 +1,11 @@
 .DS_Store
 
 # Don't include all data
-data/config/*
-data/error/*
-data/state/*
-data/system/*
-data/wars/*
+data/config/*.json
+data/error/*.json
+data/state/*.csv
+data/system/*.csv
+data/wars/*.csv
 
 
 # Byte-compiled / optimized / DLL files

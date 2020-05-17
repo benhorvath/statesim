@@ -265,8 +265,8 @@ class InternationalSystem(object):
 
                 # If conquered, give borders to conquering state and delete from system
                 n = k
-                neighbors = [j for j in self.network.neighbors(n) if self.world[j].power >= 1]
-                new_borders = [j for j in neighbors if j != k and self.world[j].power >= 1]
+                neighbors = [j for j in self.network.neighbors(n) if self.world[j].power > 1]
+                new_borders = [j for j in neighbors if j != k and self.world[j].power > 1]
                 for j in new_borders:
                     self.network.add_edge(self.world[k].conquered.name, j)
                 self.network.remove_node(k)

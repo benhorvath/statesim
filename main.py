@@ -3,21 +3,7 @@
 
 # Main script to run StateSim
 
-# TODO: Think about redoing main loop, make it easier to read, smaller var names
 # TODO: Config logger
-# TODO: Use appropriate algorithm/numpy arrays for alliance combinations
-# TODO: Equip system with three data sets: One to monitor state level, the other system level
-#       These can be converted to Pandas and exported, after end of 500 runs
-#       One to monitor war
-# TODO: system: break network and .world into two functions, restore self.world = f() to __init__, after network initialization
-
-# Simulation control file:
-#   configs = [ {}, {}, {}, ...] All configs we want
-#   for config in configs:
-#       ...  # run simulation
-#       world.reports.state.to_csv('')
-#       world.reports.system.to_csv('')
-#       world.reports.war.to_csv('')
 
 from datetime import datetime
 from itertools import product
@@ -63,6 +49,9 @@ if __name__ == '__main__':
                'growth_sigma': [0.01, 0.025, 0.05],
                'versailles': [True, False]}
     configs = expand_grid(config_dict)
+
+    # Randomize configs
+    configs = configs.sample(frac=1).reset_index(drop=True)
 
     # Iterate over each config setting
     for config in configs.to_dict(orient='row'):

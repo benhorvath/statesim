@@ -46,8 +46,11 @@ class Simulation(object):
             # Randomly select state
             state = world.random_state()
 
-            # State looks for a target state to pick on
+            # State looks for a target state to pick on; if none are weaker, go to 
+            # next turn
             target = state.scan_targets()
+            if target is None:
+                continue
 
             state_est_target = state.estimate_power(target)
             if state_est_target > state.power0:

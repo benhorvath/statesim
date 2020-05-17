@@ -26,7 +26,7 @@ class State(object):
         power_diff = [self.power - i.power for i in self.border]
         target_ix = np.argmax(power_diff)
         target = self.border[target_ix]
-        return target if target != self else None
+        return target if target != self and target.power < self.power else None
 
     def seek_allies(self, against):
         """ Returns list of states that border the state specified as against,
