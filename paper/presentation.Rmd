@@ -1,0 +1,463 @@
+---
+title: "StateSim: Simulating war and diplomacy"
+author: "Ben Horvath"
+date: "May 27, 2020"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+options(digits=4)
+knitr::opts_chunk$set(echo = TRUE)
+
+setwd('~/Dropbox/Documents/school/grad/609/statesim/statesim/paper')
+
+library(dplyr)
+library(flexsurv)
+library(ggplot2)
+library(grid)
+library(jsonlite)
+library(png)
+library(survival)
+library(survminer)
+```
+
+## Introduction
+
+- Computer simulation of state systems to examine hypotheses from the realist school of international relations theory
+
+  * What factors are conducive to the stability of a state system?
+  * What factors improve the survival chances of an individual state?
+
+- Original simulation: Cusack and Stoll (1990)
+
+- Parameters are varied over 1594 runs of the simulation, and results are subjected to survival analysis
+
+
+
+## Introduction: Outline
+
+- What is a 'state'? What is a 'state system'?
+
+- Hypotheses to be tested
+
+- Outline of the simulation
+
+- Statistical analysis
+
+- Concluding remarks
+
+
+
+## What is a state system?
+
+States:
+
+- A singular entity that controls a body of territory and the associated resources and population
+- Has a monopoly of force within this territory
+- No authority greater than it, i.e., exists in anarchy
+- 'Legally' equal to the other states
+- Tries to reproduce itself by adhering to its circumscribed reason
+  * Depending on the theorist: Maximizes security or maximizes power
+
+
+## What is a state system?
+
+State system:
+
+- A collection of states and their relationships with eachother
+- The _de jure_ and _de facto_ rules of conduct between them
+- The distribution of power among them
+
+
+
+## Example: Ancient Greek state system
+
+- Urban settlements begin the 8th century BCE
+
+
+
+
+## Example: Ancient Greek state system, 700 BCE
+
+Composed of 24 states
+
+![Ancient Greek state system c. 700 BCE](./img/greece_700.png)
+
+
+
+
+## Example: Ancient Greek state system, 430 BCE
+
+Peaks at 40 states, just as the Peloponnesian War starts between Athens and Sparta (431--405)
+
+```{r fig.cap='Ancient Greek state system c. 430 BCE', fig.height=2.5, echo=FALSE}
+grid.raster(readPNG('./img/greece_430_2.png'))
+```
+
+<!-- ![Ancient Greek state system c. 430 B.C.](./img/greece_430_2.png) -->
+
+
+
+## Example: Ancient Greek state system, 338 BCE
+
+Universal empire---Macedonia under Philip seizes all of Greece. His son, Alexander the Great, takes them to war against the Persian Empire
+
+```{r fig.cap='Ancient Greek state system c. 338 BCE', fig.height=2.25, echo=FALSE}
+grid.raster(readPNG('./img/greece_338.png'))
+```
+
+
+
+## Example: Ancient Greek state system and universal empire
+
+- The final outcome of the Ancient Greek state system was universal empire
+
+- This dynamic repeats itselfs in state systems across the world, across history
+
+- What accounts for this?
+
+
+
+## Hypotheses
+
+Without going in the literature of international relations theory---this simulation explicitly models the following, and seeks to determine their effect on state stability and survival:
+
+1. Degree of inequality in power in the system
+2. Evenness of economic growth between the states
+3. The presence of norms of restraint, modeled as reparations paid by a war's loser to the victor
+4. Accuracy of state's perception of their and other states' power
+5. Destructiveness of warfare
+6. Distribution of costs of war between losers and victors
+
+
+
+## Hypotheses: Realism
+
+- Within the realist school of international relations, different theoriests propose contradictory answers for each of the hypotheses above
+
+- Despite pledging fidelity to the same (?) body of theory!
+
+  * The simulation thus functions primarily as a test of _internal consistency_, ruling out theories that contradict themselves
+  
+  
+  
+## The Simulation
+
+- I'm going to focus on the mathematical part of the simulation, and breeze over more technical aspects
+
+
+
+## The Simulation: Entities
+
+There are two central object classes to this simulation:
+
+1. `State`, representing individual states
+2. `System`, representing the 'world'
+
+
+
+## The Simulation: Phases
+
+* Phase 0: Initialize the world
+
+The next phases repeat themselves over 1000 iterations
+
+* Phase 1: Select a 'protagonist' state
+* Phase 2: Diplomacy
+* Phase 3: War (potentially)
+* Phase 4: Power adjustment, economic growth
+
+
+
+## Simulation: Phase 0: Initialize the world
+
+States represented as nodes in a random regular graph network ($n=98$, $p=8$), where the edges are the borders
+
+```{r fig.height=2, fig.align='center', echo=FALSE}
+grid.raster(readPNG('./img/random_regular.png'))
+```
+
+
+
+## Simulation: Phase 0: Initialize the world
+
+- Each of the 98 states are assigned a power resource randomly from a normal distribution with $\mu = 10$
+
+- Standard deviation is a parameter in the model
+
+
+
+## Simulation: Phase 1: Protagonist state
+
+- One state is randomly selected as the 'protagonist' of the turn
+
+- The probability of selection is proportional to their power within the system
+
+
+
+## Simulation: Phase 2: Diplomacy
+
+- The protagonist state examines all the states it borders, tries to find the one it has the most power over
+
+- States do not accurately estimate eachother's power, but according to the equation:
+
+$$ E_i(p_{j})  = p_j \times (1 + randnorm(0, \sigma_{perception})) $$
+
+where $\sigma_{perception}$ is a simulation parameter
+
+
+
+## Simulation: Phase 2: Diplomacy
+
+- If the protagonist feels sure they are more powerful than the target state, a series of diplomacy occurs
+
+- The target state tries to get allies to ward off the protagonist state
+
+- The protagonist state builds its own alliances in turn
+
+
+
+## Simulation: Phase 2: Diplomacy
+
+- State alliance behavior is very naive: A state only agrees to become an ally if it considers it to be on the winning side
+
+- State's accept or reject alliances independently of other states' decisions
+
+- When given an alliance proposal, a state assesses the power of the proposed alliance with $\sigma_{perception}$ as above
+
+
+
+## Simulation: Phase 3: War
+
+- The protagonist state has three chances to back down and avoid war over the period of this alliance building
+
+- If it does not back down, war ensues
+
+
+
+## Simulation: Phase 3: Who wins a war?
+
+- The key variable is the _power differential_ between two states or alliances
+
+- However, we want to leave room for other factors, including random chance
+
+- The simulation parametizes this as $\sigma_{victory}$
+
+
+
+## Simulation: Phase 3: Who wins a war?
+
+- Likelihood of victory ($LV$) is modeled as a logistic curve, where steepness is controlled by the parameter $\sigma_{victory}$
+
+```{r, echo=FALSE, fig.height=5.5, fig.cap='sigma_{victory} = (1, 2, 4) for black, red, and blue, respectively.'}
+LV <- function(x, sigma) 1 / (1 + exp(-x*sigma))
+
+plot(seq(-3, 3, .1), LV(seq(-3, 3, .1), 1), type='l', ylim=c(0,1),
+     xlab='Power differential', ylab='Likelihood of victory', main='Likelihoods of victory')
+lines(seq(-3, 3, .1), LV(seq(-3, 3, .1), 2), col='red')
+lines(seq(-3, 3, .1), LV(seq(-3, 3, .1), 4), col='blue')
+rect(-3.24, -0.15, 0, .5, lty=2)
+```
+
+
+
+## Simulation: Phase 3: Who wins a war?
+
+- Thus $LV$ is the area beneath one of these curves, between negative infinity and the power differently $ln(p_i/p_j)$
+
+$$ LV_{ij} = \frac{1}{\sqrt{\pi \sigma}} \int_{ -\infty }^{ ~ ln(p_i/p_j) } e^{-(x / \sigma)^2} ~ dx $$
+
+
+
+## Simulation: Phase 3: Costs of war
+
+- Both sides must incur a cost
+
+- The losing side should incur a higher cost
+
+- Costs are proportional to power differential
+
+  * War between evenly matched states is the most destructive
+  
+  
+  
+## Simulation: Phase 3: Costs of war
+
+- First, the 'base' cost of the war:
+
+$$C_i = \left( 1 - \frac{LSR - 0.5}{0.5} \right) \times C_{max}$$
+
+- where $LSR$ is a ratio of the stronger side's power to the weaker side's power:
+
+$$LSR = \frac{ max(p_i, p_j) }{p_i + p_j}$$
+
+- and $C_max$ is a parameter controlling the max cost of war
+
+
+
+## Simulation: Phase 3: Costs of war
+
+- Second, the winner/loser modifier:
+
+$$C_{stronger} = C_i - \left( min( randnorm(0, 1) \times C_{max}, C_{disparity} \right))$$
+
+$$C_{weaker} = C_i + \left( min( randnorm(0, 1) \times C_{max}, C_{disparity} \right))$$
+
+- where $C_disp$ is the disparity parameter
+
+
+
+
+## Simulation: Phase 3: Spoils of war
+
+- A portion of the losing alliance's remaining power is transferred to the winning coalition
+
+$$S = reparations \times p_j$$
+
+- where $reparations$ is a parameter controling the reparations weight
+
+
+
+## Simulation: Phase 3: The Versailles rule
+
+- The leader of the losing state transfers a percentage of their power to the winning side equal to $LSR$
+
+- Termed the 'Versailles' rule, it can be quite onerous
+
+- Is a parameter in the simulation
+
+- This is done to maintain compatibility with the original Cusack and Stoller simulation
+
+
+
+## Simulation: Phase 4: Power adjustment
+
+- States' economic growth is pulled randomly each turn from a Cauchey distribution with mean and standard deviation as model parameters
+
+- Stoll and Cusack originally used a normal distribution, which results in exponential growth; economic depressions are more frequent than predicted by a normal distribution
+
+
+
+## Simulation: Phase 4: Power adjustment
+
+```{r, echo=FALSE, fig.height=5.5, fig.align='center', fig.cap='Cauchey (red) distributions has a thicker tails than the normal distribution (black).'}
+set.seed(1804)
+x <- seq(-10, 10, by=0.1)
+plot(x, dnorm(x), type='l', ylab='Density', main='Normal and Cauchey PDFs')
+lines(x, dcauchy(x), col='red')
+```
+
+
+
+## Statistical analysis
+
+- Survival analysis: Let $\mathbf{X}$ represent the parameters of specific simulations
+
+- Modeling formula for state systems as the unit of analysis:
+
+$$\textup{Turns to universal empire} \sim \mathbf{X}$$
+
+- Modeling formula for individual states and their survival time:
+
+$$\textup{Turns to state elimination} \sim \mathbf{X}$$
+
+
+
+## Survival analysis
+
+- Not the main focus of this presention so I won't go into in depth
+
+- Models _time to event_ as the dependent variable (e.g., death, customer churn)
+
+- I use parameteric survival analysis, modeling state and system survival as an exponential curve
+  * Tried to use nonparametric Cox Proportional Hazards model, did not work out well
+  
+  
+  
+## Statisical analysis: State survival estimated coefficients
+
+```{r fig.align='center', echo=FALSE}
+grid.raster(readPNG('./img/state_coef.png'))
+```
+
+
+
+##  Statisical analysis: Interpretation
+
+- Standard errors that cross 1 indicate not significantly different than 0
+
+- >1 means increasing variable _decreases_ survival time, i.e., negative relationship
+
+- <1 means increasing variable _increases_ survival time, i.e., positive relationship
+
+
+
+## Statistical analysis: Effect of the Versailles rule
+
+Median state survival time:
+
+* Versailles=FALSE: 222 turns
+* Versailles=TRUE: 116 turns
+
+```{r fig.height=2.5, fig.align='center', echo=FALSE}
+grid.raster(readPNG('./img/versailles.png'))
+```
+
+
+
+##  Statisical analysis: Validation
+
+- Plot the (parametric) model's hazard rate against non-parametric Kaplan-Meier curve
+
+- Agreement indicates good model fit
+
+```{r fig.height=2.5, fig.align='center', echo=FALSE}
+grid.raster(readPNG('./img/m_state.png'))
+```
+
+
+
+
+
+## Statisical analysis: System survival estimated coefficients
+
+```{r fig.align='center', echo=FALSE}
+grid.raster(readPNG('./img/sys_coef.png'))
+```
+
+
+
+##  Statisical analysis: Validation
+
+- As obvious from the wide confidence intervals, not a great fit
+
+- Interestingly, the authors of the original simulation were unable to get a good fit for their own model of state survival using Tobit regression
+
+```{r fig.align='center', echo=FALSE}
+grid.raster(readPNG('./img/m_system.png'))
+```
+
+
+
+## Conclusion
+
+- Without going into international relations theory:
+
+  * Simulation has shown that even under very simple assumptions about state behavior, the effects of economic growth, norms of restraint, misperception, etc., have a very real effect on system stability and state survival
+  
+  * _Contra_ the 'automatic stabilization thesis' which suggests none of these should matter
+
+  * Simulation implies such theories suffer from logical inconsistency
+  
+  
+  
+## Code
+
+Python 3 code, paper, and records of all 1594 simulations are available at:
+
+https://github.com/benhorvath/statesim/
+
+The key reference for the original simulation is:
+
+* Thomas R. Cusack and Richard J. Stoll (1990), _Exploring Realpolitik: Probing International Relations Theory with Computer Simulation_ (Lynne Rienner Publishers)
+
