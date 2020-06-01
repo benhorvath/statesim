@@ -6,7 +6,9 @@ data/error/*.json
 data/state/*.csv
 data/system/*.csv
 data/wars/*.csv
-
+paper/mini.pdf
+paper/mini.Rmd
+paper/horvath_ben.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -131,28 +131,10 @@ Without going in the literature of international relations theory---this simulat
 
 
 
-## Hypotheses: Realism
-
-- Within the realist school of international relations, different theoriests propose contradictory answers for each of the hypotheses above
-
-- Despite pledging fidelity to the same (?) body of theory!
-
-  * The simulation thus functions primarily as a test of _internal consistency_, ruling out theories that contradict themselves
-  
-  
-  
 ## The Simulation
 
-- I'm going to focus on the mathematical part of the simulation, and breeze over more technical aspects
+- I'm going to focus on the mathematical part of the simulation, and breeze over substantial theoretical concerns
 
-
-
-## The Simulation: Entities
-
-There are two central object classes to this simulation:
-
-1. `State`, representing individual states
-2. `System`, representing the 'world'
 
 
 
@@ -165,7 +147,7 @@ The next phases repeat themselves over 1000 iterations
 * Phase 1: Select a 'protagonist' state
 * Phase 2: Diplomacy
 * Phase 3: War (potentially)
-* Phase 4: Power adjustment, economic growth
+* Phase 4: Power adjustment / economic growth
 
 
 
@@ -219,9 +201,7 @@ where $\sigma_{perception}$ is a simulation parameter
 
 ## Simulation: Phase 2: Diplomacy
 
-- State alliance behavior is very naive: A state only agrees to become an ally if it considers it to be on the winning side
-
-- State's accept or reject alliances independently of other states' decisions
+- State alliance behavior is very naive: A state only agrees to become an ally if it considers it to be the winning side
 
 - When given an alliance proposal, a state assesses the power of the proposed alliance with $\sigma_{perception}$ as above
 
@@ -263,7 +243,7 @@ rect(-3.24, -0.15, 0, .5, lty=2)
 
 ## Simulation: Phase 3: Who wins a war?
 
-- Thus $LV$ is the area beneath one of these curves, between negative infinity and the power differently $ln(p_i/p_j)$
+- Thus $LV$ is the area beneath one of these curves, between negative infinity and the power differential $ln(p_i/p_j)$
 
 $$ LV_{ij} = \frac{1}{\sqrt{\pi \sigma}} \int_{ -\infty }^{ ~ ln(p_i/p_j) } e^{-(x / \sigma)^2} ~ dx $$
 
@@ -291,7 +271,7 @@ $$C_i = \left( 1 - \frac{LSR - 0.5}{0.5} \right) \times C_{max}$$
 
 $$LSR = \frac{ max(p_i, p_j) }{p_i + p_j}$$
 
-- and $C_max$ is a parameter controlling the max cost of war
+- and $C_{max}$ is a parameter controlling the max cost of war
 
 
 
@@ -303,7 +283,7 @@ $$C_{stronger} = C_i - \left( min( randnorm(0, 1) \times C_{max}, C_{disparity} 
 
 $$C_{weaker} = C_i + \left( min( randnorm(0, 1) \times C_{max}, C_{disparity} \right))$$
 
-- where $C_disp$ is the disparity parameter
+- where $C_{disp}$ is the disparity parameter
 
 
 
@@ -314,7 +294,7 @@ $$C_{weaker} = C_i + \left( min( randnorm(0, 1) \times C_{max}, C_{disparity} \r
 
 $$S = reparations \times p_j$$
 
-- where $reparations$ is a parameter controling the reparations weight
+- where $reparations$ is a parameter between 0 and 1
 
 
 
@@ -386,9 +366,9 @@ grid.raster(readPNG('./img/state_coef.png'))
 
 - Standard errors that cross 1 indicate not significantly different than 0
 
-- >1 means increasing variable _decreases_ survival time, i.e., negative relationship
+- Greater than 1 means increasing variable _decreases_ survival time, i.e., negative relationship
 
-- <1 means increasing variable _increases_ survival time, i.e., positive relationship
+- Less than 1 means increasing variable _increases_ survival time, i.e., positive relationship
 
 
 
@@ -433,7 +413,7 @@ grid.raster(readPNG('./img/sys_coef.png'))
 
 - Interestingly, the authors of the original simulation were unable to get a good fit for their own model of state survival using Tobit regression
 
-```{r fig.align='center', echo=FALSE}
+```{r fig.height=2.5, fig.align='center', echo=FALSE}
 grid.raster(readPNG('./img/m_system.png'))
 ```
 
@@ -445,9 +425,7 @@ grid.raster(readPNG('./img/m_system.png'))
 
   * Simulation has shown that even under very simple assumptions about state behavior, the effects of economic growth, norms of restraint, misperception, etc., have a very real effect on system stability and state survival
   
-  * _Contra_ the 'automatic stabilization thesis' which suggests none of these should matter
-
-  * Simulation implies such theories suffer from logical inconsistency
+  * _Contra_ the realist theories that suggest none of those matter
   
   
   
