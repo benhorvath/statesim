@@ -1,10 +1,16 @@
 # StateSim: Monte Carlo simulation of international state systems
 
-Python simulation of war and diplomacy. Begins with initialization:
+Python simulation of war and diplomacy. 
+
+The paper uses a computer simulation to shed light on contradictory hypotheses generated from the realist school of international relations. It draws on the work of Cusack and Stoll (1990b). The simulation initializes 98 primitive states, modeled as random regular graph. The states ally with and fight wars against eachother, governed by simulation parameters set by the researcher. The parameters control variables like presence of norms of restraint, distribution of power, accuracy of perception, destructiveness of wars, the weight of chance in deciding outcome of combat, etc.
+
+Nearly 1600 simulations were ran and recorded (`data` folder). Parametric survival analysis is used to adjudicate between competing theories. The results are broadly consistent with Cusack and Stoll in that key variables are shown to be statistically significant, refuting ‘automatic stabilization’ theories of state systems. See the pdfs in the `paper` directory.
+
+The simulation begins with initialization:
 
 * Phase I: Initialize data and build world
 
-Proceeds in _n_ iterations, each in three phases:
+Proceeds in _n_ iterations (in the paper, 1000), each in three phases:
 
 * Phase II: Diplomacy
 * Phase III: War (potentially)
